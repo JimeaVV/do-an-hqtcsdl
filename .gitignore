@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Bí mật và cấu hình máy cá nhân
+.env
+
+# Dữ liệu sinh ra và model AI
+data/output/
+*.csv
+*.bak
+*.mdf
+*.ldf
+*.npy
+ai/models/
+
+# Hệ điều hành và editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# File tạm của Word
+~$*
