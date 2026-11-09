@@ -5,6 +5,9 @@
    ===================================================================== */
 USE ShopDB;
 GO
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DonHang_KH_Ngay' AND object_id = OBJECT_ID(N'DonHang'))
     CREATE INDEX IX_DonHang_KH_Ngay ON DonHang(MaKH, NgayDat) INCLUDE (TrangThai);
