@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Nhật ký trigger{% endblock %}
+{% block nguon %}{{ m.nguon('sp_NhatKy_LayDS') }}{% endblock %}
+
+{% block noi_dung %}
+{% set nhan_tt = {'Them': ('Thêm', '+'), 'Sua': ('Sửa', 'Δ'), 'Xoa': ('Xóa', '−'), 'CanhBaoKho': ('Cảnh báo kho', '!')} %}
+<section class="tam">
+  <p class="dan-giai">Mỗi dòng do trigger tự ghi khi dữ liệu thay đổi: <code>trg_DonHang_NhatKy</code> ghi thao tác trên đơn hàng, <code>trg_SanPham_CanhBaoKho</code> ghi khi tồn kho vừa xuống dưới 5.</p>
+  <form class="thanh-loc mt-3" method="get">
+    <label class="visually-hidden" for="bang">Bảng</label>
+    <select class="form-select" id="bang" name="bang" onchange="this.form.submit()">
+      <option value="">Mọi bảng</option>
+      {% for b in ['DonHang', 'SanPham'] %}<option {{ 'selected' if bang == b }}>{{ b }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="tt">Thao tác</label>
+    <select class="form-select" id="tt" name="tt" onchange="this.form.submit()">
+      <option value="">Mọi thao tác</option>
+      {% for ma, nhan in nhan_tt.items() %}<option value="{{ ma }}" {{ 'selected' if tt == ma }}>{{ nhan[0] }}</option>{% endfor %}
+    </select>
+    <noscript><button class="nut nut-vien">Lọc</button></noscript>
+    {% if bang or tt %}<a class="nut-chu" href="{{ url_for('nhat_ky') }}">Bỏ lọc</a>{% endif %}
+  </form>
+</section>
+
+<section class="tam sat">
+  <div class="tam-dau"><h2>{{ pt.tong | so }} dòng nhật ký{{ ', mới nhất ở trên' if ds }}</h2></div>
+  <div class="bang">
+  <table>
+    <thead><tr><th>Mã</th><th>Thời gian</th><th>Bảng</th><th>Thao tác</th><th>Nội dung</th></tr></thead>
+    <tbody>
+    {% for r in ds %}
+      <tr><td class="ma">{{ r.MaNK }}</td><td class="text-nowrap">{{ r.ThoiGian | ngay }}</td><td><span class="nhan-bang">{{ r.Bang }}</span></td>
+          <td><span class="tt-nk {{ r.ThaoTac }}"><i aria-hidden="true">{{ nhan_tt.get(r.ThaoTac, (r.ThaoTac, '·'))[1] }}</i>{{ nhan_tt.get(r.ThaoTac, (r.ThaoTac,))[0] }}</span></td>
+          <td>{{ r.NoiDung or '' }}</td></tr>
+    {% else %}
+      <tr><td colspan="5" class="o-trong">{{ m.trong('Chưa có dòng nhật ký nào', 'Thử đặt hàng, hủy đơn hoặc đặt cho tồn kho xuống dưới 5 để trigger ghi dòng đầu tiên.', url_for('san_pham'), 'Mở trang Sản phẩm') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{ m.phan_trang(pt) }}
+{% endblock %}

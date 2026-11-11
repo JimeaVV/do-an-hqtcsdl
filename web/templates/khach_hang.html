@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Khách hàng{% endblock %}
+{% block nguon %}{{ m.nguon('sp_KhachHang_LayDS', 'sp_KhachHang_Them', 'sp_KhachHang_Sua', 'sp_KhachHang_Xoa') }}{% endblock %}
+{% block hanh_dong %}<button class="nut nut-vang" data-bs-toggle="modal" data-bs-target="#hopKhach" data-ma="" data-ten="" data-email="" data-sdt="">Thêm khách hàng</button>{% endblock %}
+
+{% block noi_dung %}
+{% set lop_nhom = {'VIP': 'nk-vip', 'Thân thiết': 'nk-than-thiet', 'Thỉnh thoảng': 'nk-thinh-thoang', 'Sắp rời bỏ': 'nk-sap-roi-bo'} %}
+<section class="tam">
+  <div class="tam-dau">
+    <div><h2>Nhóm khách hàng theo RFM</h2>{{ m.nguon('chay_phan_nhom()', 'sp_TinhRFM', 'sp_PhanNhom_ThongKe', sang=True) }}</div>
+    <form method="post" action="{{ url_for('khach_hang_phan_nhom') }}" data-xac-nhan="Chạy lại phân nhóm cho toàn bộ khách hàng? Mất khoảng vài giây." data-nut="Chạy phân nhóm" data-dang-xu-ly="Đang phân nhóm...">
+      <button class="nut nut-vien nut-nho">Chạy lại phân nhóm</button>
+    </form>
+  </div>
+  {% if nhom %}
+  {% set tong_kh = nhom | sum(attribute='SoKhachHang') %}
+  {% set r_lon = nhom | map(attribute='R_TrungBinh') | max %}
+  {% set f_lon = nhom | map(attribute='F_TrungBinh') | max %}
+  {% set m_lon = nhom | map(attribute='M_TrungBinh') | max %}
+  <div class="co-cau" role="img" aria-label="Cơ cấu khách hàng: {% for n in nhom %}{{ n.Nhom }} {{ (n.SoKhachHang * 100 / tong_kh) | thap_phan }}%{{ ', ' if not loop.last }}{% endfor %}">
+    {% for n in nhom %}<span class="{{ lop_nhom.get(n.Nhom, 'nk-khac') }}" style="flex:{{ n.SoKhachHang }} 1 0"><b>{{ (n.SoKhachHang * 100 / tong_kh) | thap_phan }}%</b>{{ n.Nhom }}</span>{% endfor %}
+  </div>
+  <div class="bang mt-3">
+  <table>
+    <thead><tr><th>Nhóm</th><th class="so">Số khách</th><th>R: ngày từ lần mua gần nhất</th><th>F: số đơn hoàn thành</th><th>M: tổng tiền đã chi</th></tr></thead>
+    <tbody>
+    {% for n in nhom %}
+      <tr class="{{ lop_nhom.get(n.Nhom, 'nk-khac') }}">
+        <td><span class="ten-nhom">{{ n.Nhom }}</span></td>
+        <td class="so gia">{{ n.SoKhachHang | so }}</td>
+        <td><div class="do"><span class="vach" aria-hidden="true"><i style="width:{{ (n.R_TrungBinh * 100 / r_lon) | round | int if r_lon else 0 }}%"></i></span><span class="gt">{{ '%.0f' | format(n.R_TrungBinh) }}<span class="don-vi">ngày</span></span></div></td>
+        <td><div class="do"><span class="vach" aria-hidden="true"><i style="width:{{ (n.F_TrungBinh * 100 / f_lon) | round | int if f_lon else 0 }}%"></i></span><span class="gt">{{ n.F_TrungBinh | thap_phan }}<span class="don-vi">đơn</span></span></div></td>
+        <td><div class="do"><span class="vach" aria-hidden="true"><i style="width:{{ (n.M_TrungBinh * 100 / m_lon) | round | int if m_lon else 0 }}%"></i></span><span class="gt" style="min-width:15ch">{{ n.M_TrungBinh | tien }}</span></div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="nho mt-3 mb-0">Số trong bảng là trung bình của từng nhóm. R càng nhỏ càng tốt, F và M càng lớn càng tốt. Phân nhóm bằng K-means với k = 4 trên dữ liệu mô phỏng.</p>
+  {% else %}
+  {{ m.trong('Chưa phân nhóm khách hàng', 'Bấm Chạy lại phân nhóm để tính R, F, M và chia khách thành 4 nhóm.') }}
+  {% endif %}
+</section>
+
+<section class="tam sat">
+  <div class="tam-dau">
+    <h2>{{ pt.tong | so }} khách hàng{{ ' khớp “' ~ q ~ '”' if q }}</h2>
+    <form class="thanh-loc gon" method="get" role="search">
+      <div class="o-tim">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M12.2 12.2L16 16"/></svg>
+        <label class="visually-hidden" for="q">Tìm khách hàng</label>
+        <input class="form-control" id="q" name="q" value="{{ q }}" placeholder="Tên, email hoặc SĐT">
+      </div>
+      <button class="nut nut-vien">Tìm</button>
+      {% if q %}<a class="nut-chu" href="{{ url_for('khach_hang') }}">Bỏ lọc</a>{% endif %}
+    </form>
+  </div>
+  <div class="bang">
+  <table>
+    <thead><tr><th>Khách hàng</th><th>Email</th><th>SĐT</th><th>Ngày tạo</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+    <tbody>
+    {% for k in ds %}
+      <tr>
+        <td><span class="nguoi">{{ m.dai_dien(k.HoTen, k.MaKH) }}<span><span class="ten">{{ k.HoTen }}</span><span class="phu">Mã khách {{ k.MaKH }}</span></span></span></td>
+        <td>{{ k.Email }}</td><td class="text-nowrap">{{ k.SDT or '' }}</td>
+        <td class="text-nowrap">{{ k.NgayTao.strftime('%d/%m/%Y') if k.NgayTao else '' }}</td>
+        <td><div class="thao-tac">
+          <a class="nut" href="{{ url_for('don_hang', kh=k.MaKH) }}" aria-label="Đơn hàng của {{ k.HoTen }}">Đơn hàng</a>
+          <button class="nut" data-bs-toggle="modal" data-bs-target="#hopKhach" aria-label="Sửa {{ k.HoTen }}"
+                  data-ma="{{ k.MaKH }}" data-ten="{{ k.HoTen }}" data-email="{{ k.Email }}" data-sdt="{{ k.SDT or '' }}">Sửa</button>
+          <form method="post" action="{{ url_for('khach_hang_xoa', ma=k.MaKH) }}"
+                data-xac-nhan="Xóa khách hàng {{ k.HoTen }}? Khách đã có đơn hàng thì không xóa được." data-nut="Xóa khách hàng">
+            <button class="nut nguy-hiem" aria-label="Xóa {{ k.HoTen }}">Xóa</button>
+          </form>
+        </div></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="o-trong">{{ m.trong('Không có khách hàng phù hợp', 'Không khách nào khớp tên, email hoặc số điện thoại đang tìm.', url_for('khach_hang'), 'Bỏ lọc') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{ m.phan_trang(pt) }}
+
+<div class="modal fade" id="hopKhach" tabindex="-1" aria-labelledby="hopKhachTieuDe" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" method="post" action="{{ url_for('khach_hang_luu') }}">
+      <div class="hop-dau"><h2 id="hopKhachTieuDe">Khách hàng</h2></div>
+      <div class="hop-than" style="color:var(--chu)">
+        <input type="hidden" name="MaKH">
+        <label class="form-label" for="khTen">Họ tên</label><input class="form-control mb-3" id="khTen" name="HoTen" required maxlength="100">
+        <label class="form-label" for="khEmail">Email</label><input class="form-control mb-3" id="khEmail" name="Email" type="email" required maxlength="150">
+        <label class="form-label" for="khSdt">Số điện thoại</label><input class="form-control" id="khSdt" name="SDT" maxlength="20" inputmode="tel">
+      </div>
+      <div class="hop-chan">
+        <button type="button" class="nut nut-vien" data-bs-dismiss="modal">Hủy bỏ</button><button class="nut nut-chinh">Lưu khách hàng</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.getElementById("hopKhach").addEventListener("show.bs.modal", (e) => {
+  const b = e.relatedTarget.dataset, f = e.target.querySelector("form");
+  f.MaKH.value = b.ma; f.HoTen.value = b.ten; f.Email.value = b.email; f.SDT.value = b.sdt;
+  e.target.querySelector("#hopKhachTieuDe").textContent = b.ma ? "Sửa khách hàng " + b.ma : "Thêm khách hàng";
+});
+</script>
+{% endblock %}

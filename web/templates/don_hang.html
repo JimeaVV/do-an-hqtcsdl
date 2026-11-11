@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Đơn hàng{% endblock %}
+{% block nguon %}{{ m.nguon('sp_DonHang_LayDS') }}{% endblock %}
+
+{% block noi_dung %}
+<section class="tam">
+  <div class="thanh-loc">
+    <nav class="chon-nhom" aria-label="Lọc theo trạng thái">
+      <a class="{{ 'dang-chon' if not tt }}" href="{{ url_for('don_hang', kh=kh or None) }}" {{ 'aria-current=true' if not tt }}>Mọi trạng thái</a>
+      {% for ma, gt in TRANG_THAI.items() %}
+      <a class="{{ 'dang-chon' if tt == ma }}" href="{{ url_for('don_hang', tt=ma, kh=kh or None) }}" {{ 'aria-current=true' if tt == ma }}>{{ gt[0] }}</a>
+      {% endfor %}
+    </nav>
+    <form class="thanh-loc day-phai" method="get">
+      {% if tt %}<input type="hidden" name="tt" value="{{ tt }}">{% endif %}
+      <label class="visually-hidden" for="kh">Mã khách hàng</label>
+      <input class="form-control ngan-o" id="kh" name="kh" value="{{ kh }}" placeholder="Mã khách hàng" inputmode="numeric">
+      <button class="nut nut-vien">Lọc</button>
+      {% if tt or kh %}<a class="nut-chu" href="{{ url_for('don_hang') }}">Bỏ lọc</a>{% endif %}
+    </form>
+  </div>
+</section>
+
+<section class="tam sat">
+  <div class="tam-dau"><h2>{{ pt.tong | so }} đơn{% if tt %} {{ TRANG_THAI[tt][0] | lower if tt in TRANG_THAI else tt }}{% endif %}{% if kh %} của khách {{ kh }}{% endif %}</h2></div>
+  <div class="bang">
+  <table>
+    <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th>Trạng thái</th><th class="so">Tổng tiền</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+    <tbody>
+    {% for d in ds %}
+      <tr>
+        <td><a class="ma fw-semibold" href="{{ url_for('don_hang_chi_tiet', ma=d.MaDon) }}" style="color:var(--chu)">{{ d.MaDon }}</a></td>
+        <td><span class="nguoi">{{ m.dai_dien(d.HoTen, d.MaKH) }}<span><span class="ten">{{ d.HoTen }}</span><span class="phu">Mã khách {{ d.MaKH }}</span></span></span></td>
+        <td class="text-nowrap">{{ d.NgayDat | ngay }}</td>
+        <td>{{ m.trang_thai(d.TrangThai) }}</td>
+        <td class="so gia">{{ d.TongTien | tien }}</td>
+        <td><div class="thao-tac"><a class="nut" href="{{ url_for('don_hang_chi_tiet', ma=d.MaDon) }}" aria-label="Xem đơn {{ d.MaDon }}">Xem đơn</a></div></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="o-trong">{{ m.trong('Không có đơn phù hợp', 'Không đơn nào khớp trạng thái và mã khách đang lọc.', url_for('don_hang'), 'Bỏ lọc') }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{ m.phan_trang(pt) }}
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Giỏ hàng{% endblock %}
+{% block nguon %}{{ m.nguon('sp_SanPham_LayTheoDS', 'sp_KhachHang_LayDS', 'sp_DatHang') }}{% endblock %}
+{% block hanh_dong %}{% if mon %}<span>{{ mon | length }} dòng hàng, {{ so_mon_gio | so }} sản phẩm</span>{% endif %}{% endblock %}
+
+{% block noi_dung %}
+{% set co_khach = khach and khach.MaKH %}
+<div class="luoi luoi-2-1">
+  <div class="cot">
+    <section class="tam sat">
+      {% if mon %}
+      <form method="post">
+        <div class="bang">
+        <table>
+          <thead><tr><th>Sản phẩm</th><th class="so">Đơn giá</th><th class="so">Tồn kho</th><th style="width:120px">Số lượng</th><th class="so">Thành tiền</th></tr></thead>
+          <tbody>
+          {% for mh in mon %}
+            <tr>
+              <td><div class="o-ten"><span class="the-ma sac-{{ mh.TenDanhMuc | sac }}" title="Mã sản phẩm">{{ mh.MaSP }}</span>
+                  <div style="min-width:0"><div class="ten">{{ mh.TenSP }}</div><div class="mo-ta">{{ mh.TenDanhMuc }}</div></div></div></td>
+              <td class="so">{{ mh.Gia | tien }}</td>
+              <td class="so">{% if mh.TonKho < mh.SoLuong %}<span class="ton thap"><span class="ton-so">{{ mh.TonKho | so }}</span><span class="ton-nhan">Không đủ hàng</span></span>{% else %}{{ mh.TonKho | so }}{% endif %}</td>
+              <td><label class="visually-hidden" for="sl{{ mh.MaSP }}">Số lượng {{ mh.TenSP }}</label>
+                  <input class="form-control nho-o so" id="sl{{ mh.MaSP }}" type="number" min="0" name="sl_{{ mh.MaSP }}" value="{{ mh.SoLuong }}"></td>
+              <td class="so gia">{{ (mh.Gia * mh.SoLuong) | tien }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div class="chan-bang">
+          <button class="nut nut-vien nut-nho" name="hanh_dong" value="cap_nhat">Cập nhật số lượng</button>
+          <button class="nut-chu do" name="hanh_dong" value="xoa_het">Xóa hết giỏ</button>
+          <span class="nho ms-auto">Số lượng 0 sẽ bỏ món khỏi giỏ.</span>
+        </div>
+      </form>
+      {% else %}
+        {{ m.trong('Giỏ hàng đang trống', 'Mở trang Sản phẩm và bấm Thêm vào giỏ ở món cần bán.', url_for('san_pham'), 'Xem sản phẩm') }}
+      {% endif %}
+    </section>
+    <div class="ghi-khoa"><b>Đặt hàng chạy trong một giao dịch.</b> Thiếu hàng ở bất kỳ món nào thì cả đơn bị hủy (ROLLBACK) và kho không bị trừ. Muốn thử, đặt số lượng lớn hơn tồn kho.</div>
+  </div>
+
+  <div class="cot">
+    <section class="tam">
+      <div class="tam-dau"><h2>Khách hàng</h2></div>
+      {% if co_khach %}
+        <div class="khach-chon">
+          {{ m.dai_dien(khach.HoTen, khach.MaKH, lon=True) }}
+          <div class="nguoi"><div><span class="ten">{{ khach.HoTen }}</span><span class="phu">Mã khách {{ khach.MaKH }}, {{ khach.Email }}</span></div></div>
+        </div>
+      {% else %}
+        <div class="khach-chua">Chưa chọn khách hàng. Tìm theo tên, email hoặc số điện thoại rồi bấm Chọn.</div>
+      {% endif %}
+      <form method="get" class="d-flex gap-2" role="search">
+        <label class="visually-hidden" for="qkh">Tìm khách hàng</label>
+        <input class="form-control" id="qkh" name="q_kh" value="{{ q_kh }}" placeholder="Tên, email hoặc SĐT">
+        <button class="nut nut-vien">Tìm</button>
+      </form>
+      {% if ket_qua_kh %}
+        <div class="ds-khach">
+        {% for k in ket_qua_kh %}
+          <form method="post">
+            <input type="hidden" name="hanh_dong" value="chon_khach"><input type="hidden" name="MaKH" value="{{ k.MaKH }}">
+            <input type="hidden" name="HoTen" value="{{ k.HoTen }}"><input type="hidden" name="Email" value="{{ k.Email }}">
+            <span class="nguoi">{{ m.dai_dien(k.HoTen, k.MaKH) }}<span><span class="ten">{{ k.HoTen }}</span><span class="phu">{{ k.Email }}</span></span></span>
+            <button class="nut nut-vien nut-nho" aria-label="Chọn khách {{ k.HoTen }}">Chọn</button>
+          </form>
+        {% endfor %}
+        </div>
+      {% elif q_kh %}<p class="nho mt-3 mb-0">Không tìm thấy khách hàng nào khớp “{{ q_kh }}”.</p>{% endif %}
+    </section>
+
+    <section class="hoa-don" aria-label="Tóm tắt đơn">
+      <h2>Tạm tính</h2>
+      {% for mh in mon %}
+        <div class="dong"><span>{{ mh.TenSP }} × {{ mh.SoLuong }}</span><span class="cham" aria-hidden="true"></span><span class="gt">{{ (mh.Gia * mh.SoLuong) | tien }}</span></div>
+      {% else %}
+        <div class="dong"><span class="mo">Chưa có món nào</span></div>
+      {% endfor %}
+      <div class="tong"><span>Tổng cộng</span><span class="gt">{{ tong | tien }}</span></div>
+      <form method="post" action="{{ url_for('dat_hang') }}" data-dang-xu-ly="Đang đặt hàng...">
+        <button class="nut nut-chinh nut-day" {{ 'disabled' if not mon or not co_khach }}>Đặt hàng</button>
+      </form>
+      {% if mon and not co_khach %}<p class="nho">Chọn khách hàng trước khi đặt.</p>
+      {% elif not mon %}<p class="nho">Thêm sản phẩm vào giỏ trước khi đặt.</p>{% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

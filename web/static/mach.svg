@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="320" viewBox="0 0 820 320" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Đường mạch in và lỗ via, dùng làm nền cho dải đầu trang -->
+  <g stroke="#1C5445" stroke-width="2">
+    <path d="M820 34H640l-34 34H452"/>
+    <path d="M820 58H664l-46 46H516l-28 28H332"/>
+    <path d="M820 82H690l-58 58H560"/>
+    <path d="M820 106H716l-70 70H470l-34 34H250"/>
+    <path d="M820 198H736l-30 30H598l-40 40H396"/>
+    <path d="M820 222H752l-42 42H640"/>
+    <path d="M820 246H770l-52 52H520"/>
+    <path d="M372 0v40l40 40h64"/>
+    <path d="M300 0v70l-44 44H140"/>
+    <path d="M236 320v-48l-36-36H96"/>
+    <path d="M560 140v34"/>
+    <!-- vỏ chip -->
+    <rect x="520" y="174" width="80" height="54" rx="6"/>
+    <path d="M534 174v-12M548 174v-12M572 174v-12M586 174v-12M534 228v12M548 228v12M572 228v12M586 228v12M520 190h-12M520 212h-12M600 190h12M600 212h12"/>
+  </g>
+  <g stroke="#1C5445" stroke-width="2" fill="#0B2F27">
+    <circle cx="444" cy="68" r="7"/>
+    <circle cx="324" cy="132" r="7"/>
+    <circle cx="242" cy="210" r="7"/>
+    <circle cx="388" cy="268" r="7"/>
+    <circle cx="632" cy="264" r="7"/>
+    <circle cx="512" cy="298" r="7"/>
+    <circle cx="132" cy="114" r="7"/>
+    <circle cx="88" cy="236" r="7"/>
+  </g>
+  <!-- chân hàn mạ vàng -->
+  <g fill="#F2B632" fill-opacity=".55">
+    <circle cx="484" cy="80" r="5"/>
+    <circle cx="560" cy="140" r="5"/>
+    <circle cx="372" cy="0" r="5"/>
+  </g>
+</svg>

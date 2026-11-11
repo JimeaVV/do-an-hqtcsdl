@@ -1,0 +1,47 @@
+{% macro phan_trang(pt) -%}
+  {% if pt and pt.so_trang > 1 %}
+  {% set args = request.args.to_dict() %}
+  <nav class="phan-trang" aria-label="Phân trang">
+    <span class="vi-tri">Trang <b>{{ pt.trang | so }}</b> trong <b>{{ pt.so_trang | so }}</b>, tổng <b>{{ pt.tong | so }}</b> dòng</span>
+    <div class="cap">
+      {% set _ = args.update({'trang': pt.trang - 1}) %}
+      <a class="nut nut-vien nut-nho" href="?{{ args | urlencode }}" {% if pt.trang <= 1 %}aria-disabled="true" tabindex="-1"{% endif %}>Trang trước</a>
+      {% set _ = args.update({'trang': pt.trang + 1}) %}
+      <a class="nut nut-vien nut-nho" href="?{{ args | urlencode }}" {% if pt.trang >= pt.so_trang %}aria-disabled="true" tabindex="-1"{% endif %}>Trang sau</a>
+    </div>
+  </nav>
+  {% endif %}
+{%- endmacro %}
+
+{# Trạng thái đơn: mỗi trạng thái có một hình riêng đi kèm chữ, không chỉ khác màu #}
+{% macro trang_thai(tt, lon=False) -%}
+  <span class="tt tt-{{ tt }}{{ ' lon' if lon }}">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      {% if tt == 'HoanThanh' %}<circle cx="8" cy="8" r="7" fill="currentColor" stroke="none"/><path d="M4.8 8.2l2.2 2.2 4.2-4.6" stroke="#fff"/>
+      {% elif tt == 'ChoXuLy' %}<circle cx="8" cy="8" r="6.2"/><path d="M8 4.6V8l2.3 1.5"/>
+      {% else %}<circle cx="8" cy="8" r="6.2"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8"/>{% endif %}
+    </svg>{{ TRANG_THAI.get(tt, (tt,))[0] }}</span>
+{%- endmacro %}
+
+{# Dòng ghi procedure đang dùng, để thuyết trình. sang=True khi đặt trên nền trắng #}
+{% macro nguon() -%}
+  <p class="nguon{{ ' sang' if kwargs.get('sang') }}"><span>Procedure:</span>{% for t in varargs %}<code>{{ t }}</code>{% endfor %}</p>
+{%- endmacro %}
+
+{% macro dai_dien(ten, khoa, lon=False) -%}
+  <span class="dai-dien sac-{{ khoa | sac }}{{ ' lon' if lon }}" aria-hidden="true">{{ ten | chu_dau }}</span>
+{%- endmacro %}
+
+{# Trạng thái trống: hình linh kiện chưa gắn, một câu nói rõ chuyện gì, một nút đi tiếp #}
+{% macro trong(tieu_de, mo_ta=None, href=None, nut=None) -%}
+  <div class="trong">
+    <svg width="72" height="56" viewBox="0 0 72 56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="20" y="12" width="32" height="32" rx="5" stroke-dasharray="5 5"/>
+      <path d="M28 12V4M36 12V4M44 12V4M28 52v-8M36 52v-8M44 52v-8M20 22H8M20 34H8M64 22H52M64 34H52"/>
+      <circle cx="5" cy="22" r="2.5"/><circle cx="67" cy="34" r="2.5"/>
+    </svg>
+    <div class="tieu-de">{{ tieu_de }}</div>
+    {% if mo_ta %}<p>{{ mo_ta }}</p>{% endif %}
+    {% if href %}<a class="nut nut-vien nut-nho" href="{{ href }}">{{ nut }}</a>{% endif %}
+  </div>
+{%- endmacro %}

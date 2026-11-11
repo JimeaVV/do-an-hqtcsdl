@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Đối tượng CSDL{% endblock %}
+{% block nguon %}{{ m.nguon('sp_DoiTuongCSDL') }}{% endblock %}
+
+{% macro khoi(loai, nhan, hai_cot=False) -%}
+  {% set ds = nhom.get(loai, []) %}
+  <section class="tam sat">
+    <div class="dau-dem"><span class="dem">{{ ds | length }}</span><h2>{{ nhan }}</h2></div>
+    {% if ds %}
+    <ul class="ds-doi-tuong {{ 'hai-cot' if hai_cot }}">
+      {% for r in ds %}
+      <li><span class="ten">{{ r.Ten }}</span>
+          {% if loai != 'Procedure' and r.Bang %}<span class="nhan-bang">{{ r.Bang }}</span>
+          {% elif r.NgayTao %}<span class="nho text-nowrap">{{ r.NgayTao.strftime('%d/%m/%Y') }}</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% else %}{{ m.trong('Chưa có ' ~ nhan | lower, 'Chạy các file trong thư mục sql/ để tạo.') }}{% endif %}
+  </section>
+{%- endmacro %}
+
+{% block noi_dung %}
+<div class="luoi luoi-2-1">
+  {{ khoi('Procedure', 'Stored procedure', hai_cot=True) }}
+  <div class="cot">
+    {{ khoi('Trigger', 'Trigger') }}
+    {{ khoi('Index', 'Index') }}
+    <div class="ghi-khoa">Đọc từ bảng hệ thống của SQL Server (<b>sys.procedures</b>, <b>sys.triggers</b>, <b>sys.indexes</b>). Không tính index của khóa chính và ràng buộc UNIQUE. Bên phải mỗi trigger và index là bảng mà nó gắn vào.</div>
+  </div>
+</div>
+{% endblock %}

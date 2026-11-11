@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Danh mục{% endblock %}
+{% block nguon %}{{ m.nguon('sp_DanhMuc_LayDS', 'sp_DanhMuc_Them', 'sp_DanhMuc_Sua', 'sp_DanhMuc_Xoa') }}{% endblock %}
+
+{% block noi_dung %}
+<div class="luoi luoi-2-1">
+  <section class="tam sat">
+    <div class="tam-dau"><div><h2>{{ ds | length }} danh mục</h2><div class="nho">Sửa tên ngay trong ô rồi bấm Lưu tên. Màu của thẻ mã cũng là màu danh mục ở trang Sản phẩm.</div></div></div>
+    <div class="bang">
+    <table>
+      <thead><tr><th>Mã</th><th>Tên danh mục</th><th style="width:30%">Số sản phẩm</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+      <tbody>
+      {% set lon_nhat = (ds | map(attribute='SoSanPham') | max) if ds else 0 %}
+      {% for d in ds %}
+        <tr>
+          <td><span class="the-ma sac-{{ d.TenDanhMuc | sac }}" style="min-width:46px">{{ d.MaDanhMuc }}</span></td>
+          <td>
+            <form class="d-flex gap-2 align-items-center" method="post">
+              <input type="hidden" name="MaDanhMuc" value="{{ d.MaDanhMuc }}">
+              <label class="visually-hidden" for="dm{{ d.MaDanhMuc }}">Tên danh mục {{ d.MaDanhMuc }}</label>
+              <input class="form-control nho-o" id="dm{{ d.MaDanhMuc }}" name="TenDanhMuc" value="{{ d.TenDanhMuc }}" required maxlength="100" style="min-width:150px">
+              <button class="nut-chu text-nowrap" aria-label="Lưu tên danh mục {{ d.MaDanhMuc }}">Lưu tên</button>
+            </form>
+          </td>
+          <td><div class="do"><span class="vach" aria-hidden="true"><i style="width:{{ (d.SoSanPham * 100 / lon_nhat) | round | int if lon_nhat else 0 }}%"></i></span><span class="gt" style="min-width:5ch">{{ d.SoSanPham | so }}</span></div></td>
+          <td><div class="thao-tac">
+            <form method="post" action="{{ url_for('danh_muc_xoa', ma=d.MaDanhMuc) }}" data-xac-nhan="Xóa danh mục {{ d.TenDanhMuc }}? Chỉ xóa được khi danh mục không còn sản phẩm." data-nut="Xóa danh mục">
+              <button class="nut nguy-hiem" aria-label="Xóa danh mục {{ d.TenDanhMuc }}">Xóa</button>
+            </form>
+          </div></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="o-trong">{{ m.trong('Chưa có danh mục', 'Thêm danh mục đầu tiên bằng ô bên cạnh. Sản phẩm nào cũng phải thuộc một danh mục.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <form class="tam" method="post">
+    <div class="tam-dau"><h2>Thêm danh mục</h2></div>
+    <label class="form-label" for="dmMoi">Tên danh mục</label>
+    <input class="form-control" id="dmMoi" name="TenDanhMuc" required maxlength="100" aria-describedby="dmMoiGoiY">
+    <div class="form-text" id="dmMoiGoiY">Tên không được trùng với danh mục đã có.</div>
+    <button class="nut nut-chinh nut-day mt-3">Thêm danh mục</button>
+  </form>
+</div>
+{% endblock %}

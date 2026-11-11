@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Sản phẩm{% endblock %}
+{% block nguon %}{% if che_do_ai %}{{ m.nguon('tim_kiem()', 'sp_SanPham_LayTheoDS') }}{% else %}{{ m.nguon('sp_SanPham_LayDS', 'sp_SanPham_Xoa') }}{% endif %}{% endblock %}
+{% block hanh_dong %}<a href="{{ url_for('san_pham_form') }}" class="nut nut-vang">Thêm sản phẩm</a>{% endblock %}
+
+{% block noi_dung %}
+<section class="tam {{ 'khoi-ai' if che_do_ai }}">
+  <form class="thanh-loc" method="get" role="search">
+    <div class="o-tim {{ 'rong-het' if che_do_ai }}">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M12.2 12.2L16 16"/></svg>
+      <label class="visually-hidden" for="q">{{ 'Câu mô tả thứ cần tìm' if che_do_ai else 'Tên sản phẩm' }}</label>
+      <input class="form-control" id="q" name="q" value="{{ q }}"
+             placeholder="{{ 'Mô tả thứ cần tìm, ví dụ: tai nghe để làm việc ở quán cà phê' if che_do_ai else 'Tên sản phẩm' }}">
+    </div>
+    {% if not che_do_ai %}
+    <label class="visually-hidden" for="dm">Danh mục</label>
+    <select class="form-select" id="dm" name="dm">
+      <option value="">Tất cả danh mục</option>
+      {% for d in danh_muc %}<option value="{{ d.MaDanhMuc }}" {{ 'selected' if dm == d.MaDanhMuc }}>{{ d.TenDanhMuc }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <button class="nut nut-chinh">Tìm</button>
+    {% if not che_do_ai and (q or dm) %}<a class="nut-chu" href="{{ url_for('san_pham') }}">Bỏ lọc</a>{% endif %}
+    <div class="form-check form-switch day-phai mb-0">
+      <input class="form-check-input" type="checkbox" role="switch" id="aiSwitch" name="ai" value="1" {{ 'checked' if che_do_ai }} onchange="this.form.submit()">
+      <label class="form-check-label" for="aiSwitch">Tìm theo nghĩa (AI)</label>
+    </div>
+  </form>
+  {% if che_do_ai %}
+    <p class="loi-dan">
+      {% if trang_thai_ai.san_sang %}<b>Đang tìm theo nghĩa.</b> Kết quả xếp theo độ giống giữa câu tìm và mô tả sản phẩm, từ 0 đến 1. Không cần trùng từ khóa.
+      {% elif trang_thai_ai.loi %}<b style="color:var(--do)">Module AI lỗi:</b> {{ trang_thai_ai.loi }}
+      {% else %}<b>Model đang nạp.</b> Lần tìm đầu tiên có thể mất vài giây.{% endif %}
+    </p>
+    <div class="vi-du" aria-label="Câu tìm mẫu">
+      {% for cau in ['tai nghe để làm việc ở quán cà phê', 'máy tính mỏng nhẹ cho sinh viên', 'sạc dự phòng mang đi du lịch'] %}
+        <a href="{{ url_for('san_pham', q=cau, ai=1) }}">{{ cau }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+{# co_diem: bật AI và có câu tìm thì mỗi dòng mới có DiemAI; bật AI mà chưa gõ gì thì vẫn là danh sách thường #}
+{% set co_diem = che_do_ai and q and ds %}
+<section class="tam sat">
+  <div class="tam-dau">
+    <h2>{% if co_diem %}{{ ds | length }} sản phẩm gần nghĩa nhất với “{{ q }}”{% elif che_do_ai and q %}Kết quả tìm theo nghĩa
+        {% else %}{{ (pt.tong if pt else 0) | so }} sản phẩm{{ ' khớp bộ lọc' if q or dm }}{% endif %}</h2>
+  </div>
+  <div class="bang">
+  <table>
+    <thead><tr>
+      {% if co_diem %}<th>Hạng</th>{% endif %}
+      <th>Sản phẩm</th><th>Danh mục</th><th class="so">Giá</th>
+      <th class="so" title="Thanh ngang so với sản phẩm nhiều hàng nhất trong trang này">Tồn kho</th>
+      {% if co_diem %}<th>Độ giống</th>{% endif %}<th><span class="visually-hidden">Thao tác</span></th>
+    </tr></thead>
+    <tbody>
+    {% set ton_lon = (ds | map(attribute='TonKho') | max) if ds else 0 %}
+    {% for sp in (ds | sort(attribute='DiemAI', reverse=true) if co_diem else ds) %}
+      <tr>
+        {% if co_diem %}<td class="hang-ai">{{ loop.index }}</td>{% endif %}
+        <td><div class="o-ten">
+          <span class="the-ma sac-{{ sp.TenDanhMuc | sac }}" title="Mã sản phẩm">{{ sp.MaSP }}</span>
+          <div style="min-width:0"><div class="ten">{{ sp.TenSP }}</div>{% if sp.MoTa %}<div class="mo-ta" title="{{ sp.MoTa }}">{{ sp.MoTa }}</div>{% endif %}</div>
+        </div></td>
+        <td><span class="nhan-dm sac-{{ sp.TenDanhMuc | sac }}">{{ sp.TenDanhMuc }}</span></td>
+        <td class="so gia">{{ sp.Gia | tien }}</td>
+        <td class="so"><span class="ton {{ 'het' if sp.TonKho == 0 else ('thap' if sp.TonKho < 5) }}">
+          <span class="ton-so">{{ sp.TonKho | so }}</span>
+          {% if sp.TonKho == 0 %}<span class="ton-nhan">Hết hàng</span>
+          {% elif sp.TonKho < 5 %}<span class="ton-nhan">Sắp hết</span>
+          {% else %}<span class="ton-thanh" aria-hidden="true"><i style="width:{{ (sp.TonKho * 100 / ton_lon) | round | int }}%"></i></span>{% endif %}
+        </span></td>
+        {% if co_diem %}<td><span class="do-giong"><span class="vach" aria-hidden="true"><i style="width:{{ (([sp.DiemAI, 0] | max) * 100) | round | int }}%"></i></span><span class="diem">{{ '%.3f' | format(sp.DiemAI) }}</span></span></td>{% endif %}
+        <td><div class="thao-tac">
+          <form method="post" action="{{ url_for('gio_them', ma=sp.MaSP) }}">
+            <button class="nut them" {{ 'disabled' if sp.TonKho == 0 }} aria-label="Thêm {{ sp.TenSP }} vào giỏ">Thêm vào giỏ</button>
+          </form>
+          <a class="nut" href="{{ url_for('san_pham_form', ma=sp.MaSP) }}" aria-label="Sửa {{ sp.TenSP }}">Sửa</a>
+          <form method="post" action="{{ url_for('san_pham_xoa', ma=sp.MaSP) }}"
+                data-xac-nhan="Xóa sản phẩm {{ sp.MaSP }} ({{ sp.TenSP }})? Nếu sản phẩm đã có đơn hàng, trigger chỉ ẩn sản phẩm thay vì xóa hẳn."
+                data-nut="Xóa sản phẩm">
+            <button class="nut nguy-hiem" aria-label="Xóa {{ sp.TenSP }}">Xóa</button>
+          </form>
+        </div></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="o-trong">
+        {% if che_do_ai and not q %}{{ m.trong('Mô tả thứ cần tìm', 'Gõ một câu như cách khách hỏi ở quầy rồi bấm Tìm, hoặc chọn một câu mẫu ở trên.') }}
+        {% elif che_do_ai %}{{ m.trong('Chưa có kết quả', 'Module AI chưa trả về sản phẩm nào cho câu này. Thử câu khác hoặc tắt Tìm theo nghĩa.') }}
+        {% else %}{{ m.trong('Không có sản phẩm phù hợp', 'Không sản phẩm nào khớp tên và danh mục đang chọn.', url_for('san_pham'), 'Bỏ lọc') }}{% endif %}
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{ m.phan_trang(pt) }}
+{% endblock %}

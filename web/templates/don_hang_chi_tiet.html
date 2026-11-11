@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Đơn {{ d.MaDon }}{% endblock %}
+{% block tieu_de_trang %}Đơn hàng <span class="ma">{{ d.MaDon }}</span>{% endblock %}
+{% block nguon %}{{ m.nguon('sp_DonHang_LayChiTiet', 'sp_HuyDon', 'sp_ThanhToan') }}{% endblock %}
+{% block hanh_dong %}<a href="{{ url_for('don_hang') }}">Về danh sách đơn</a>{% endblock %}
+
+{% block noi_dung %}
+<div class="luoi luoi-2-1">
+  <section class="tam sat">
+    <div class="tom-tat">
+      <div><div class="nhan">Trạng thái</div>{{ m.trang_thai(d.TrangThai, lon=True) }}</div>
+      <div><div class="nhan">Khách hàng</div>
+        <div class="nguoi">{{ m.dai_dien(d.HoTen, d.MaKH) }}<div><a class="ten" href="{{ url_for('don_hang', kh=d.MaKH) }}" title="Xem các đơn của khách này">{{ d.HoTen }}</a><span class="phu">Mã khách {{ d.MaKH }}, {{ d.Email }}</span></div></div></div>
+      <div><div class="nhan">Đặt lúc</div><div class="lon">{{ d.NgayDat | ngay }}</div></div>
+    </div>
+    <div class="bang">
+    <table>
+      <thead><tr><th>Sản phẩm</th><th class="so">Số lượng</th><th class="so">Đơn giá lúc mua</th><th class="so">Thành tiền</th></tr></thead>
+      <tbody>
+      {% for c in chi_tiet %}
+        <tr><td><div class="o-ten"><span class="the-ma" title="Mã sản phẩm">{{ c.MaSP }}</span><span class="ten">{{ c.TenSP }}</span></div></td>
+            <td class="so">{{ c.SoLuong | so }}</td>
+            <td class="so">{{ c.DonGia | tien }}</td><td class="so gia">{{ c.ThanhTien | tien }}</td></tr>
+      {% else %}
+        <tr><td colspan="4" class="o-trong">{{ m.trong('Đơn không có dòng hàng nào') }}</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3" class="so">Tổng cộng</td><td class="so">{{ d.TongTien | tien }}</td></tr></tfoot>
+    </table>
+    </div>
+  </section>
+
+  <div class="cot">
+    <section class="hoa-don" aria-label="Thanh toán">
+      <h2>{{ 'Thanh toán' if d.TrangThai == 'ChoXuLy' else 'Tổng kết đơn' }}</h2>
+      <div class="dong"><span>Số dòng hàng</span><span class="cham" aria-hidden="true"></span><span class="gt">{{ chi_tiet | length }}</span></div>
+      <div class="dong"><span>Tổng số lượng</span><span class="cham" aria-hidden="true"></span><span class="gt">{{ chi_tiet | sum(attribute='SoLuong') | so }}</span></div>
+      <div class="tong"><span>Tổng cộng</span><span class="gt">{{ d.TongTien | tien }}</span></div>
+      {% if d.TrangThai == 'ChoXuLy' %}
+      <form method="post" action="{{ url_for('don_hang_thanh_toan', ma=d.MaDon) }}" data-dang-xu-ly="Đang thanh toán..." class="mt-3">
+        <label class="form-label" for="pt">Phương thức</label>
+        <select class="form-select" id="pt" name="PhuongThuc">{% for p in phuong_thuc %}<option>{{ p }}</option>{% endfor %}</select>
+        <button class="nut nut-chinh nut-day">Thanh toán {{ d.TongTien | tien }}</button>
+      </form>
+      <p class="nho">Số tiền do database tự tính từ chi tiết đơn.</p>
+      {% else %}
+      <p class="nho">Đơn đã {{ 'được thanh toán' if d.TrangThai == 'HoanThanh' else 'bị hủy' }} nên không thanh toán hay hủy được nữa.</p>
+      {% endif %}
+    </section>
+
+    {% if d.TrangThai == 'ChoXuLy' %}
+    <section class="tam">
+      <div class="tam-dau"><div><h2>Hủy đơn</h2><div class="nho">Số lượng trong đơn được cộng lại vào kho trong cùng một giao dịch.</div></div></div>
+      <form method="post" action="{{ url_for('don_hang_huy', ma=d.MaDon) }}"
+            data-xac-nhan="Hủy đơn {{ d.MaDon }}? Số lượng trong đơn sẽ được cộng lại vào kho." data-nut="Hủy đơn">
+        <button class="nut nut-do nut-day">Hủy đơn và hoàn kho</button>
+      </form>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

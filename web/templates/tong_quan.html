@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}Tổng quan{% endblock %}
+{% block nguon %}{{ m.nguon('sp_ThongKe_Dashboard') }}{% endblock %}
+{% block hanh_dong %}<span>Số liệu lúc <span class="ma">{{ luc.strftime('%H:%M %d/%m/%Y') }}</span></span>{% endblock %}
+
+{% block noi_dung %}
+{% set dt = (s.DoanhThu | tien_gon).split(' ', 1) %}
+<section class="tam sat" aria-label="Số liệu chính">
+  <div class="chi-so">
+    <div class="chinh">
+      <div class="nhan">Doanh thu từ đơn hoàn thành</div>
+      <div class="gia-tri" title="{{ s.DoanhThu | tien }}">{{ dt[0] }}<span class="don-vi">{{ dt[1] }}</span></div>
+      {% if so_sanh %}
+      <div class="phu">Tháng {{ so_sanh.thang }} đạt <b>{{ so_sanh.gia_tri | tien_gon }}</b>,
+        {% if so_sanh.phan_tram >= 0 %}<span class="len">▲ tăng {{ so_sanh.phan_tram | thap_phan }}%</span>
+        {% else %}<span class="xuong">▼ giảm {{ so_sanh.phan_tram | abs | thap_phan }}%</span>{% endif %}
+        so với tháng {{ so_sanh.truoc }}</div>
+      {% endif %}
+      {% if tia %}
+      <div class="tia">
+        <svg viewBox="0 0 120 36" preserveAspectRatio="none" role="img" aria-label="Doanh thu các tháng đủ ngày từ {{ tia.tu }} đến {{ tia.den }}">
+          <polyline points="{{ tia.duong }}" fill="none" stroke="#F2B632" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          <circle cx="{{ tia.cuoi[0] }}" cy="{{ tia.cuoi[1] }}" r="3.5" fill="#F2B632"/>
+        </svg>
+        {{ tia.tu }} đến {{ tia.den }}
+      </div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="nhan">Đơn hàng</div>
+      <div class="gia-tri">{{ s.TongDon | so }}</div>
+      <div class="thanh-ghep" aria-hidden="true">
+        {% for ma, so_don, pt in ty_le %}<span class="nen-{{ ma }}" style="width:{{ pt }}%"></span>{% endfor %}
+      </div>
+      <div class="phu">{{ s.DonChoXuLy | so }} đơn đang chờ xử lý</div>
+    </div>
+    <div>
+      <div class="nhan">Khách hàng</div>
+      <div class="gia-tri">{{ s.SoKhachHang | so }}</div>
+      <div class="phu"><a href="{{ url_for('khach_hang') }}">Xem nhóm khách hàng</a></div>
+    </div>
+    <div>
+      <div class="nhan">Sản phẩm đang bán</div>
+      <div class="gia-tri">{{ s.SoSanPham | so }}</div>
+      <div class="phu">{% if s.SapHetHang %}<span class="canh-bao-kho">{{ s.SapHetHang | so }} sản phẩm còn dưới 5 cái</span>{% else %}Không có sản phẩm nào dưới 5 cái{% endif %}</div>
+    </div>
+  </div>
+</section>
+
+<div class="luoi luoi-2-1 cang">
+  <section class="tam">
+    <div class="tam-dau">
+      <h2>Doanh thu 6 tháng gần nhất</h2>
+      {% if bieu_do.thang %}
+      <div class="chu-giai">
+        <span><i></i>Tháng đủ ngày</span>
+        {% if bieu_do.dang_chay %}<span><i class="soc"></i>Tháng đang chạy, tính đến {{ luc.strftime('%d/%m') }}</span>{% endif %}
+        {% if bieu_do.trung_binh %}<span><i class="net"></i>Trung bình tháng đủ ngày</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% if bieu_do.thang %}
+    <div class="khung-bieu-do"><canvas id="bdDoanhThu" role="img" aria-label="Biểu đồ cột doanh thu theo tháng: {% for t in bieu_do.thang %}{{ t }} {{ bieu_do.doanh_thu[loop.index0] | tien_gon }}{{ ', ' if not loop.last }}{% endfor %}"></canvas></div>
+    {% else %}{{ m.trong('Chưa có doanh thu', 'Chưa có đơn hoàn thành trong 6 tháng gần đây. Thanh toán một đơn để thấy cột đầu tiên.', url_for('don_hang', tt='ChoXuLy'), 'Mở đơn chờ xử lý') }}{% endif %}
+  </section>
+
+  <section class="tam">
+    <div class="tam-dau"><div><h2>Trạng thái đơn hàng</h2><div class="nho">Mỗi ô là 1% của {{ s.TongDon | so }} đơn</div></div></div>
+    <div class="luoi-o" aria-hidden="true">{% for ma in o_vuong %}<i class="o-{{ ma }}"></i>{% endfor %}</div>
+    {% for ma, so_don, pt in ty_le %}
+      <div class="dong-ty-le">{{ m.trang_thai(ma) }}<span class="so">{{ so_don | so }}</span><span class="so pt">{{ pt | thap_phan }}%</span></div>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="luoi luoi-2-1 cang">
+  <section class="tam">
+    <div class="tam-dau"><div><h2>Năm sản phẩm bán chạy nhất</h2><div class="nho">Xếp theo số lượng đã bán, thanh ngang so theo doanh thu</div></div></div>
+    {% if top5 %}
+    {% set lon_nhat = top5 | map(attribute='DoanhThu') | max %}
+    <ol class="xep-hang">
+      {% for r in top5 %}
+      <li>
+        <span class="hang" aria-hidden="true">{{ loop.index }}</span>
+        <span class="ten">{{ r.TenSP }} <span class="ma">{{ r.MaSP }}</span></span>
+        <span class="da-ban">đã bán {{ r.DaBan | so }}</span>
+        <span class="tien">{{ r.DoanhThu | tien }}</span>
+        <span class="vach" aria-hidden="true"><i style="width:{{ (r.DoanhThu * 100 / lon_nhat) | round(1) if lon_nhat else 0 }}%"></i></span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}{{ m.trong('Chưa có dữ liệu bán hàng', 'Bảng xếp hạng hiện ra sau khi có đơn hoàn thành.', url_for('san_pham'), 'Xem sản phẩm') }}{% endif %}
+  </section>
+
+  <section class="tam">
+    <div class="tam-dau"><h2>Cần xem</h2></div>
+    <ul class="viec">
+      <li><span class="so-lon">{{ s.DonChoXuLy | so }}</span><a href="{{ url_for('don_hang', tt='ChoXuLy') }}">Mở danh sách</a>
+          <span class="mo-ta">đơn chờ xử lý, chưa thanh toán và chưa hủy</span></li>
+      <li><span class="so-lon">{{ s.SapHetHang | so }}</span><a href="{{ url_for('nhat_ky', tt='CanhBaoKho') }}">Mở nhật ký kho</a>
+          <span class="mo-ta">sản phẩm còn dưới 5 cái, trigger ghi lại mỗi lần chạm ngưỡng</span></li>
+      <li><span class="so-lon">{{ s.DonDaHuy | so }}</span><a href="{{ url_for('don_hang', tt='DaHuy') }}">Mở danh sách</a>
+          <span class="mo-ta">đơn đã hủy, kho được cộng lại khi hủy</span></li>
+    </ul>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+const bd = {{ bieu_do | tojson }};
+const cv = document.getElementById("bdDoanhThu");
+if (cv) {
+  const n = bd.doanh_thu.length;
+  // Tháng đang chạy tô sọc vàng để không bị đọc nhầm là doanh thu sụt
+  const o = document.createElement("canvas"); o.width = o.height = 10;
+  const g = o.getContext("2d");
+  g.fillStyle = "#FBE3A2"; g.fillRect(0, 0, 10, 10);
+  g.strokeStyle = "#F2B632"; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(-2, 12); g.lineTo(12, -2); g.moveTo(-7, 7); g.lineTo(7, -7); g.moveTo(3, 17); g.lineTo(17, 3); g.stroke();
+  const soc = cv.getContext("2d").createPattern(o, "repeat");
+
+  const nhanCot = {
+    id: "nhanCot",
+    afterDatasetsDraw(c) {
+      const x = c.ctx; x.save();
+      const hep = c.width < 520;  // màn hình hẹp: chữ nhỏ hơn, bỏ phần lẻ và chữ "tỷ" để các số không đè nhau
+      x.font = (hep ? "600 11px" : "600 14px") + " 'Be Vietnam Pro', sans-serif"; x.textAlign = "center"; x.textBaseline = "middle";
+      // Số nằm trên đầu cột, có nền trắng để đường trung bình không cắt ngang chữ
+      c.getDatasetMeta(0).data.forEach((cot, i) => {
+        const chu = hep ? Math.round(bd.doanh_thu[i] / 1e9).toLocaleString("vi-VN") : dinhDangTy(bd.doanh_thu[i]), r = x.measureText(chu).width / 2 + (hep ? 3 : 7), y = cot.y - 15;
+        x.fillStyle = "#FFFFFF"; x.beginPath(); x.roundRect(cot.x - r, y - 11, r * 2, 22, 6); x.fill();
+        x.fillStyle = "#12201B"; x.fillText(chu, cot.x, y + 1);
+      });
+      x.restore();
+    }
+  };
+  const duongTrungBinh = {
+    id: "duongTrungBinh",
+    afterDatasetsDraw(c) {
+      if (!bd.trung_binh) return;
+      const y = c.scales.y.getPixelForValue(bd.trung_binh), a = c.chartArea, x = c.ctx;
+      x.save(); x.setLineDash([6, 5]); x.strokeStyle = "#F2B632"; x.lineWidth = 2;
+      x.beginPath(); x.moveTo(a.left, y); x.lineTo(a.right, y); x.stroke(); x.restore();
+    }
+  };
+  new Chart(cv, {
+    type: "bar",
+    data: { labels: bd.thang, datasets: [{ data: bd.doanh_thu, borderRadius: 7, borderSkipped: false, maxBarThickness: 76, categoryPercentage: .72,
+            backgroundColor: bd.doanh_thu.map((_, i) => bd.dang_chay && i === n - 1 ? soc : "#0F5C4A"),
+            hoverBackgroundColor: bd.doanh_thu.map((_, i) => bd.dang_chay && i === n - 1 ? soc : "#0B2F27") }] },
+    options: {
+      maintainAspectRatio: false,
+      layout: { padding: { top: 30 } },
+      plugins: { legend: { display: false },
+                 tooltip: { backgroundColor: "#082520", padding: 12, titleFont: { size: 14 }, bodyFont: { size: 14 },
+                            callbacks: { label: (c) => dinhDangTien(c.raw) + (bd.dang_chay && c.dataIndex === n - 1 ? " (tháng đang chạy)" : ""),
+                                         afterBody: () => bd.trung_binh ? "Trung bình tháng đủ ngày: " + dinhDangTy(bd.trung_binh) + " ₫" : "" } } },
+      scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 5, callback: (v) => (v / 1e9).toLocaleString("vi-VN") + " tỷ" }, border: { display: false }, grid: { color: "#E8EDE9" } },
+                x: { grid: { display: false }, border: { color: "#B9C5BD" }, ticks: { font: { size: 14, weight: 600 }, color: "#12201B" } } }
+    },
+    plugins: [duongTrungBinh, nhanCot]
+  });
+}
+</script>
+{% endblock %}

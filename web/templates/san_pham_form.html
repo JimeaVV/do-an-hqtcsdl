@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "_macro.html" as m with context %}
+{% block tieu_de %}{{ 'Sửa sản phẩm' if ma else 'Thêm sản phẩm' }}{% endblock %}
+{% block tieu_de_trang %}{% if ma %}Sửa sản phẩm <span class="ma">{{ ma }}</span>{% else %}Thêm sản phẩm{% endif %}{% endblock %}
+{% block nguon %}{{ m.nguon('sp_SanPham_Sua' if ma else 'sp_SanPham_Them') }}{% endblock %}
+{% block hanh_dong %}<a href="{{ url_for('san_pham') }}">Về danh sách sản phẩm</a>{% endblock %}
+
+{% block noi_dung %}
+<div class="luoi luoi-2-1">
+  <form class="tam" method="post" id="formSP" data-dang-xu-ly="Đang lưu...">
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label" for="TenSP">Tên sản phẩm</label>
+        <input class="form-control" id="TenSP" name="TenSP" required maxlength="200" value="{{ sp.TenSP if sp else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="MaDanhMuc">Danh mục</label>
+        <select class="form-select" id="MaDanhMuc" name="MaDanhMuc" required>
+          {% for d in danh_muc %}<option value="{{ d.MaDanhMuc }}" {{ 'selected' if sp and sp.MaDanhMuc | string == d.MaDanhMuc | string }}>{{ d.TenDanhMuc }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="MoTa">Mô tả</label>
+        <textarea class="form-control" id="MoTa" name="MoTa" rows="4" aria-describedby="moTaGoiY">{{ sp.MoTa if sp and sp.MoTa else '' }}</textarea>
+        <div class="form-text" id="moTaGoiY">Ghi công dụng và đối tượng dùng. Mô tả càng rõ thì tìm kiếm AI càng đúng. Sau khi sửa, cần chạy lại ai/tao_embedding.py.</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="Gia">Giá (VNĐ)</label>
+        <input class="form-control" id="Gia" name="Gia" type="number" min="0" step="1000" required value="{{ (sp.Gia | int) if sp else '' }}"
+               {% if ma %}aria-describedby="giaGoiY"{% endif %}>
+        {% if ma %}<div class="form-text" id="giaGoiY">Đổi giá thì trigger ghi giá cũ và giá mới vào bảng LichSuGia.</div>{% endif %}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="TonKho">Tồn kho</label>
+        <input class="form-control" id="TonKho" name="TonKho" type="number" min="0" required value="{{ (sp.TonKho | int) if sp else 0 }}">
+      </div>
+    </div>
+    <hr class="vach-ngan">
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="nut nut-chinh">{{ 'Lưu thay đổi' if ma else 'Thêm sản phẩm' }}</button>
+      <a class="nut nut-vien" href="{{ url_for('san_pham') }}">Quay lại</a>
+    </div>
+  </form>
+
+  <aside aria-label="Xem trước thẻ giá">
+    <div class="the-gia">
+      <div class="dm" id="xtDm"></div>
+      <div class="ten" id="xtTen"></div>
+      <div class="gia" id="xtGia"></div>
+      <div class="kho" id="xtKho"></div>
+    </div>
+    <p class="nho mt-3 mb-0">Thẻ giá xem trước, đổi theo những gì đang nhập ở bên trái.</p>
+  </aside>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+(() => {
+  const f = document.getElementById("formSP"), o = (id) => document.getElementById(id);
+  const ve = () => {
+    o("xtDm").textContent = f.MaDanhMuc.selectedOptions[0] ? f.MaDanhMuc.selectedOptions[0].textContent : "";
+    o("xtTen").textContent = f.TenSP.value.trim() || "Tên sản phẩm";
+    o("xtGia").textContent = f.Gia.value === "" ? "0 ₫" : dinhDangTien(Number(f.Gia.value));
+    const ton = Number(f.TonKho.value || 0);
+    o("xtKho").textContent = ton <= 0 ? "Hết hàng" : ton < 5 ? "Sắp hết, còn " + ton + " cái" : "Còn " + ton.toLocaleString("vi-VN") + " cái trong kho";
+  };
+  f.addEventListener("input", ve); ve();
+})();
+</script>
+{% endblock %}
