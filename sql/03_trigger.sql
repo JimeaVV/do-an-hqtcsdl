@@ -22,6 +22,11 @@
        ENABLE  TRIGGER trg_SanPham_CanhBaoKho ON SanPham;
    ===================================================================== */
 
+-- Trigger cũng ghi nhớ QUOTED_IDENTIFIER lúc tạo (xem ghi chú ở 02_procedure.sql).
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 USE ShopDB;
 GO
 
@@ -150,3 +155,4 @@ FROM sys.triggers
 WHERE parent_class = 1
 ORDER BY name;
 GO
+

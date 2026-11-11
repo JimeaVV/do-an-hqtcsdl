@@ -18,7 +18,18 @@
        50007  Dữ liệu JSON không hợp lệ
        50008  Tên danh mục đã tồn tại
    - Procedure thêm trả mã mới qua tham số OUTPUT.
+
+   VỀ SET QUOTED_IDENTIFIER
+   Mỗi procedure ghi nhớ giá trị QUOTED_IDENTIFIER tại lúc được tạo. Bảng
+   DonHang có filtered index (04_index.sql) nên mọi lệnh INSERT/UPDATE/DELETE
+   vào nó phải chạy với QUOTED_IDENTIFIER ON. sqlcmd mặc định là OFF (trừ khi
+   có -I), nên hai dòng SET dưới đây đảm bảo procedure luôn được tạo đúng
+   dù chạy file bằng SSMS hay sqlcmd.
    ===================================================================== */
+
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
 
 USE ShopDB;
 GO
@@ -671,3 +682,4 @@ GO
 SELECT COUNT(*) AS SoProcedure FROM sys.procedures;
 SELECT name, create_date FROM sys.procedures ORDER BY name;
 GO
+

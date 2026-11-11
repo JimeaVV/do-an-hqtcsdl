@@ -31,3 +31,4 @@ DROP INDEX IX_CTDH_MaSP         ON ChiTietDonHang;
 DROP INDEX IX_SanPham_DM_Gia    ON SanPham;
 DROP INDEX IX_DonHang_ChoXuLy   ON DonHang;
 */
+
