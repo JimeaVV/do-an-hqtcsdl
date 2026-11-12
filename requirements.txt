@@ -1,7 +1,1 @@
-flask
-pyodbc
-python-dotenv
-pandas
-numpy
-scikit-learn
-sentence-transformers
+flask pyodbc python-dotenv pandas numpy scikit-learn sentence-transformers
