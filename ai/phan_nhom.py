@@ -82,7 +82,7 @@ def _gan_ten_nhom(df_clusters, k=4):
     }).reset_index()
 
     if k == 4:
-        # Cụm có R cao nhất là 'Sắp rời bỏ'
+        # R là số ngày kể từ lần mua cuối → R LỚN = đã lâu không mua → "Sắp rời bỏ"
         idx_roi_bo = summary["R"].idxmax()
         cluster_roi_bo = summary.loc[idx_roi_bo, "Cluster"]
 

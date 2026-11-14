@@ -3,6 +3,11 @@ data/tai_du_lieu_tiki.py
 Tải danh mục sản phẩm đồ công nghệ thực tế từ sàn thương mại điện tử Tiki (Cách C).
 Lưu kết quả ra file CSV: data/sanpham_tiki_congnghe.csv
 Sau đó cập nhật vào bảng DanhMuc và SanPham trong cơ sở dữ liệu ShopDB.
+
+QUAN TRỌNG:
+  - File CSV đã được commit sẵn vào repo.
+  - Chỉ chạy tai_san_pham_tiki() khi cần làm mới dữ liệu (mỗi lần gọi ~144 request API Tiki).
+  - Thành viên khác chỉ cần chạy cap_nhat_database() đọc từ CSV có sẵn.
 """
 
 import sys
@@ -116,15 +121,29 @@ def cap_nhat_database(csv_path=None):
     """
     Cập nhật dữ liệu sản phẩm từ CSV vào bảng SanPham trong ShopDB.
     Để bảo toàn liên kết với 500.000 đơn hàng của Vinh, ta cập nhật các MaSP hiện có.
+
+    KHÔNG tự động gọi tai_san_pham_tiki() — để tránh gọi ~144 request API Tiki mỗi lần.
+    File CSV đã được commit sẵn trong repo. Nếu chưa có, hãy chạy tai_san_pham_tiki() thủ công.
     """
     if csv_path is None:
         csv_path = os.path.join(current_dir, "sanpham_tiki_congnghe.csv")
 
     if not os.path.exists(csv_path):
-        print(f"[!] Không tìm thấy file {csv_path}. Đang tiến hành tải từ Tiki...")
-        df = tai_san_pham_tiki()
-    else:
-        df = pd.read_csv(csv_path, encoding="utf-8-sig")
+        raise FileNotFoundError(
+            f"[!] Không tìm thấy file '{csv_path}'.\n"
+            "    Hãy chạy: python data/tai_du_lieu_tiki.py --fetch\n"
+            "    hoặc tải file CSV từ repo về thư mục data/."
+        )
+
+    df = pd.read_csv(csv_path, encoding="utf-8-sig")
+
+    # --- Kiểm tra chất lượng dữ liệu ---
+    # Lọc bỏ sản phẩm có mô tả kiểu "SP demo" (dữ liệu giả, không phải dữ liệu Tiki thực)
+    mo_ta_demo = df["MoTa"].str.lower().str.startswith("sp demo")
+    n_demo = mo_ta_demo.sum()
+    if n_demo > 0:
+        print(f"[!] Phát hiện {n_demo} sản phẩm có mô tả 'SP demo...' — bỏ qua, chỉ nạp dữ liệu Tiki thực.")
+        df = df[~mo_ta_demo].reset_index(drop=True)
 
     print(f"[*] Đang chuẩn bị cập nhật {len(df)} sản phẩm vào bảng SanPham...")
     conn = get_connection(autocommit=False)
@@ -135,19 +154,34 @@ def cap_nhat_database(csv_path=None):
         cursor.execute("DISABLE TRIGGER trg_SanPham_LichSuGia ON SanPham;")
         cursor.execute("DISABLE TRIGGER trg_SanPham_CanhBaoKho ON SanPham;")
 
-        # Cập nhật tên danh mục đầu tiên thành danh mục thực tế
+        # --- FIX: Cập nhật danh mục theo TenDanhMuc từ CSV, không dùng idx 1,2,3,4 ---
+        # Lấy mapping TenDanhMuc hiện có trong DB
+        cursor.execute("SELECT MaDanhMuc, TenDanhMuc FROM DanhMuc ORDER BY MaDanhMuc")
+        db_danhmuc = {row[1]: row[0] for row in cursor.fetchall()}
+
+        # Danh mục thực tế từ CSV ánh xạ theo thứ tự xuất hiện
         unique_cats = df["TenDanhMuc"].unique().tolist()
-        for idx, cat_name in enumerate(unique_cats, start=1):
-            cursor.execute(
-                "UPDATE DanhMuc SET TenDanhMuc = ? WHERE MaDanhMuc = ?",
-                (cat_name, idx)
-            )
+        # Lấy MaDanhMuc hiện có theo thứ tự để gán 1-1 với tên mới
+        cursor.execute("SELECT MaDanhMuc FROM DanhMuc ORDER BY MaDanhMuc")
+        db_madanhmuc_list = [r[0] for r in cursor.fetchall()]
+
+        cat_to_madanhmuc = {}
+        for idx, cat_name in enumerate(unique_cats):
+            if idx < len(db_madanhmuc_list):
+                ma = db_madanhmuc_list[idx]
+                cursor.execute(
+                    "UPDATE DanhMuc SET TenDanhMuc = ? WHERE MaDanhMuc = ?",
+                    (cat_name, ma)
+                )
+                cat_to_madanhmuc[cat_name] = ma
+
+        print(f"[*] Đã cập nhật {len(cat_to_madanhmuc)} danh mục: {list(cat_to_madanhmuc.keys())}")
 
         # Lấy danh sách MaSP hiện có trong DB
         cursor.execute("SELECT MaSP FROM SanPham ORDER BY MaSP")
         db_masp = [r[0] for r in cursor.fetchall()]
 
-        # Cập nhật tên và mô tả sản phẩm thật từ Tiki vào các MaSP đầu tiên
+        # Cập nhật tên, mô tả, giá, danh mục theo đúng danh mục từ CSV
         update_data = []
         for i, row in df.iterrows():
             if i >= len(db_masp):
@@ -156,10 +190,12 @@ def cap_nhat_database(csv_path=None):
             ten_sp = str(row["TenSP"])
             mo_ta = str(row["MoTa"])
             gia = int(row["Gia"]) if row["Gia"] > 0 else 500000
-            update_data.append((ten_sp, mo_ta, gia, ma_sp))
+            # Lấy MaDanhMuc đúng theo tên danh mục của sản phẩm
+            ma_danhmuc = cat_to_madanhmuc.get(row["TenDanhMuc"])
+            update_data.append((ten_sp, mo_ta, gia, ma_danhmuc, ma_sp))
 
         cursor.fast_executemany = True
-        sql_update = "UPDATE SanPham SET TenSP = ?, MoTa = ?, Gia = ? WHERE MaSP = ?"
+        sql_update = "UPDATE SanPham SET TenSP = ?, MoTa = ?, Gia = ?, MaDanhMuc = ? WHERE MaSP = ?"
         cursor.executemany(sql_update, update_data)
 
         # Bật lại trigger
@@ -171,8 +207,13 @@ def cap_nhat_database(csv_path=None):
 
     except Exception as e:
         conn.rollback()
-        cursor.execute("ENABLE TRIGGER trg_SanPham_LichSuGia ON SanPham;")
-        cursor.execute("ENABLE TRIGGER trg_SanPham_CanhBaoKho ON SanPham;")
+        # Bật lại trigger trong trường hợp lỗi
+        try:
+            cursor.execute("ENABLE TRIGGER trg_SanPham_LichSuGia ON SanPham;")
+            cursor.execute("ENABLE TRIGGER trg_SanPham_CanhBaoKho ON SanPham;")
+            conn.commit()
+        except Exception:
+            pass
         print(f"[-] Lỗi cập nhật: {e}", file=sys.stderr)
         raise
     finally:
@@ -180,6 +221,16 @@ def cap_nhat_database(csv_path=None):
         conn.close()
 
 if __name__ == "__main__":
-    tai_san_pham_tiki()
+    import argparse
+    parser = argparse.ArgumentParser(description="Nạp dữ liệu sản phẩm Tiki vào ShopDB")
+    parser.add_argument(
+        "--fetch", action="store_true",
+        help="Tải lại dữ liệu từ API Tiki (~144 request). Mặc định chỉ đọc CSV có sẵn."
+    )
+    args = parser.parse_args()
+
+    if args.fetch:
+        print("[*] Chế độ --fetch: Đang tải dữ liệu mới từ API Tiki...")
+        tai_san_pham_tiki()
     cap_nhat_database()
 

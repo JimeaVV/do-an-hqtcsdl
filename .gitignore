@@ -9,7 +9,10 @@ venv/
 
 # Dữ liệu sinh ra và model AI
 data/output/
+# Cho phép commit file CSV dữ liệu Tiki đã cào sẵn (data/sanpham_tiki_congnghe.csv)
+# để các thành viên không phải gọi lại ~144 API request mỗi lần.
 *.csv
+!data/sanpham_tiki_congnghe.csv
 *.bak
 *.mdf
 *.ldf
